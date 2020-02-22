@@ -1,0 +1,45 @@
+# Install Needed package
+{
+install.packages("rvest")
+library("rvest")
+}
+  
+# Getting List of restaurants from zomato in bhandup
+{
+url <- "https://www.zomato.com/mumbai/bhandup-restaurants"
+WEBPAGE <- read_html(url)
+
+# Get Restaurant name and place
+WEBPAGE %>% html_nodes("a.result-title") %>%   html_attr("title") %>% stringr::str_split(pattern = ',') -> listing
+
+# Bind the list to a data frame
+WEBPAGE_DATAFRAME <- do.call(rbind.data.frame, listing)
+
+# Give names to the columns
+names(WEBPAGE_DATAFRAME) <- c("NAME","PLACE")
+
+# Now Get Other Attributes: Price and Timing
+WEBPAGE_DATAFRAME$COST_FOR_TWO <- WEBPAGE %>% html_nodes("div.res-cost > span.pl0") %>%   html_text()
+WEBPAGE_DATAFRAME$TIMING <- WEBPAGE %>% html_nodes("div.res-timing > div.search-grid-right-text") %>%   html_text()
+
+#have a look at the scrapped data
+View(head(WEBPAGE_DATAFRAME))
+
+# Trim White Space if any
+WEBPAGE_DATAFRAME$NAME  <- trimws(WEBPAGE_DATAFRAME$NAME , which = "both")
+WEBPAGE_DATAFRAME$PLACE  <- trimws(WEBPAGE_DATAFRAME$PLACE , which = "both")
+WEBPAGE_DATAFRAME$COST_FOR_TWO  <- trimws(WEBPAGE_DATAFRAME$COST_FOR_TWO , which = "both")
+WEBPAGE_DATAFRAME$TIMING  <- trimws(WEBPAGE_DATAFRAME$TIMING , which = "both")
+
+# Replace '–'  characater to 'to ' since its in unicode
+WEBPAGE_DATAFRAME$TIMING  <-gsub("–","to ",WEBPAGE_DATAFRAME$TIMING )
+# Replace Unicode Rs character to "Rs."
+WEBPAGE_DATAFRAME$COST_FOR_TWO  <-gsub("\u20b9","Rs. ",WEBPAGE_DATAFRAME$COST_FOR_TWO )
+
+#Store in final data-frame and remove redundant data
+LIST_RESTAURANT<- WEBPAGE_DATAFRAME[,c(1,3,4)]
+
+
+#Export it to .csv file
+write.csv(LIST_RESTAURANT,"LIST_RESTAURANT.csv", row.names = F, quote = T)
+}
